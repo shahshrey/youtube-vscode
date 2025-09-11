@@ -1,0 +1,127 @@
+{
+    "name": "youtube-in-vscode",
+    "displayName": "YouTube in VS Code",
+    "description": "View YouTube videos directly within VS Code",
+    "version": "0.0.1",
+    "publisher": "your-publisher-name",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/yourusername/youtube-in-vscode"
+    },
+    "engines": {
+        "vscode": "^1.74.0"
+    },
+    "categories": ["Other"],
+    "activationEvents": [
+        "onCommand:youtube-in-vs-code.openYouTube",
+        "onCommand:youtube-in-vs-code.openInEditor",
+        "onCommand:youtube-in-vs-code.playFromUrl",
+        "onCommand:youtube-in-vs-code.openAndPlayDefault",
+        "onCommand:youtube-in-vs-code.close",
+        "onView:youtube-sidebar",
+        "onView:youtube-explorer"
+    ],
+    "main": "./out/extension.js",
+    "contributes": {
+        "configuration": {
+            "title": "YouTube in VS Code",
+            "properties": {
+                "youtubeInVSCode.apiKey": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Your YouTube Data API v3 key"
+                },
+                "youtubeInVSCode.defaultUrl": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Default YouTube URL to load when using Play from URL command"
+                },
+                "youtubeInVSCode.savedUrls": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "description": "Display name for the URL"
+                            },
+                            "url": {
+                                "type": "string",
+                                "description": "YouTube URL"
+                            }
+                        }
+                    },
+                    "default": [],
+                    "description": "List of saved YouTube URLs with custom names"
+                }
+            }
+        },
+        "commands": [
+            {
+                "command": "youtube-in-vs-code.openYouTube",
+                "title": "YouTube: Open YouTube Viewer"
+            },
+            {
+                "command": "youtube-in-vs-code.openInEditor",
+                "title": "YouTube: Open in Editor Window"
+            },
+            {
+                "command": "youtube-in-vs-code.playFromUrl",
+                "title": "YouTube: Play from URL"
+            },
+            {
+                "command": "youtube-in-vs-code.openAndPlayDefault",
+                "title": "YouTube: Open Editor and Play Default URL"
+            },
+            {
+                "command": "youtube-in-vs-code.close",
+                "title": "YouTube: Close YouTube Editor"
+            }
+        ],
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "youtube-sidebar-view",
+                    "title": "YouTube",
+                    "icon": "$(play-circle)"
+                }
+            ]
+        },
+        "views": {
+            "youtube-sidebar-view": [
+                {
+                    "type": "webview",
+                    "id": "youtube-sidebar",
+                    "name": "YouTube"
+                }
+            ],
+            "explorer": [
+                {
+                    "type": "webview",
+                    "id": "youtube-explorer",
+                    "name": "YouTube",
+                    "visibility": "collapsed"
+                }
+            ]
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "pretest": "npm run compile && npm run lint",
+        "lint": "eslint src --ext ts",
+        "test": "node ./out/test/runTest.js"
+    },
+    "devDependencies": {
+        "@types/vscode": "^1.74.0",
+        "@types/node": "16.x",
+        "@typescript-eslint/eslint-plugin": "^5.45.0",
+        "@typescript-eslint/parser": "^5.45.0",
+        "eslint": "^8.28.0",
+        "typescript": "^4.9.3"
+    },
+    "dependencies": {
+        "axios": "^1.6.0"
+    }
+}
