@@ -13,8 +13,25 @@ type WebviewToExtensionMessage = LoadFromUrlMessage | SearchMessage | GetTrendin
 
 type ApiKeyRequiredResponse = { command: 'apiKeyRequired' };
 type PlayVideoResponse = { command: 'playVideo'; videoId: string };
-type LoadShortsResponse = { command: 'loadShorts'; shorts: any[]; currentIndex: number };
-type PagedResults = { results: any[]; nextPageToken?: string; totalResults?: number };
+interface VideoItem {
+	id: { videoId: string } | string;
+	snippet: {
+		title: string;
+		channelTitle: string;
+		publishedAt: string;
+		channelId: string;
+		thumbnails: {
+			high: { url: string };
+		};
+		resourceId?: { videoId: string };
+	};
+	statistics?: {
+		viewCount: string;
+	};
+}
+
+type LoadShortsResponse = { command: 'loadShorts'; shorts: VideoItem[]; currentIndex: number };
+type PagedResults = { results: VideoItem[]; nextPageToken?: string; totalResults?: number };
 type SearchResultsResponse = { command: 'searchResults' } & PagedResults;
 type TrendingResultsResponse = { command: 'trendingResults' } & PagedResults;
 type ExtensionToWebviewMessage =
@@ -892,9 +909,9 @@ async function handleWebviewMessage(message: WebviewToExtensionMessage, postMess
 					});
 					postMessageCallback({
 						command: 'searchResults',
-						results: (response.data as any).items,
-						nextPageToken: (response.data as any).nextPageToken,
-						totalResults: (response.data as any).pageInfo.totalResults
+						results: response.data.items,
+						nextPageToken: response.data.nextPageToken,
+						totalResults: response.data.pageInfo.totalResults
 					});
 				} else if (parsedUrl.type === 'video' && parsedUrl.videoId) {
 					const response = await axios.get(YT_VIDEOS, {
@@ -935,7 +952,10 @@ async function handleWebviewMessage(message: WebviewToExtensionMessage, postMess
 								}
 							});
 							
-							const shortsVideos = [video, ...relatedResponse.data.items.filter((item: any) => item.id.videoId !== parsedUrl.videoId)];
+							const shortsVideos = [video, ...relatedResponse.data.items.filter((item: VideoItem) => {
+							const videoId = typeof item.id === 'string' ? item.id : item.id.videoId;
+							return videoId !== parsedUrl.videoId;
+						})];
 							
 							postMessageCallback({
 								command: 'loadShorts',
@@ -962,12 +982,12 @@ async function handleWebviewMessage(message: WebviewToExtensionMessage, postMess
 					});
 					postMessageCallback({
 						command: 'searchResults',
-						results: (response.data as any).items.map((item: any) => ({
+						results: response.data.items.map((item: VideoItem) => ({
 							...item,
-							id: { videoId: item.snippet.resourceId.videoId }
+							id: { videoId: item.snippet.resourceId?.videoId || '' }
 						})),
-						nextPageToken: (response.data as any).nextPageToken,
-						totalResults: (response.data as any).pageInfo.totalResults
+						nextPageToken: response.data.nextPageToken,
+						totalResults: response.data.pageInfo.totalResults
 					});
 				} else {
 					vscode.window.showErrorMessage('Unsupported YouTube URL format');
@@ -993,9 +1013,9 @@ async function handleWebviewMessage(message: WebviewToExtensionMessage, postMess
 				});
 				postMessageCallback({
 					command: 'searchResults',
-					results: (response.data as any).items,
-					nextPageToken: (response.data as any).nextPageToken,
-					totalResults: (response.data as any).pageInfo.totalResults
+					results: response.data.items,
+					nextPageToken: response.data.nextPageToken,
+					totalResults: response.data.pageInfo.totalResults
 				});
 			} catch (error) {
 				vscode.window.showErrorMessage('Failed to search YouTube: ' + error);
@@ -1017,9 +1037,9 @@ async function handleWebviewMessage(message: WebviewToExtensionMessage, postMess
 				});
 				postMessageCallback({
 					command: 'trendingResults',
-					results: (response.data as any).items,
-					nextPageToken: (response.data as any).nextPageToken,
-					totalResults: (response.data as any).pageInfo.totalResults
+					results: response.data.items,
+					nextPageToken: response.data.nextPageToken,
+					totalResults: response.data.pageInfo.totalResults
 				});
 			} catch (error) {
 				vscode.window.showErrorMessage('Failed to fetch trending videos: ' + error);
@@ -1084,7 +1104,7 @@ class YouTubePanel {
 		this._panel.webview.html = getWebviewContent(webview);
 	}
 
-	public sendMessage(message: any) {
+	public sendMessage(message: ExtensionToWebviewMessage) {
 		this._panel.webview.postMessage(message);
 	}
 
@@ -1111,8 +1131,6 @@ class YouTubeViewProvider implements vscode.WebviewViewProvider {
 
 	public resolveWebviewView(
 		webviewView: vscode.WebviewView,
-		context: vscode.WebviewViewResolveContext,
-		_token: vscode.CancellationToken,
 	) {
 		this._view = webviewView;
 
@@ -1289,4 +1307,6 @@ export function activate(context: vscode.ExtensionContext) {
 	);
 }
 
-export function deactivate() {}
+export function deactivate(): void {
+	// Extension cleanup logic would go here
+}
