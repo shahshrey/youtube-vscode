@@ -1,7 +1,29 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import axios from 'axios';
+
+const YT_API_BASE = 'https://www.googleapis.com/youtube/v3';
+const YT_VIDEOS = `${YT_API_BASE}/videos`;
+const YT_SEARCH = `${YT_API_BASE}/search`;
+const YT_PLAYLIST_ITEMS = `${YT_API_BASE}/playlistItems`;
+
+type LoadFromUrlMessage = { command: 'loadFromUrl'; url: string; pageToken?: string };
+type SearchMessage = { command: 'search'; query: string; pageToken?: string };
+type GetTrendingMessage = { command: 'getTrending' };
+type WebviewToExtensionMessage = LoadFromUrlMessage | SearchMessage | GetTrendingMessage;
+
+type ApiKeyRequiredResponse = { command: 'apiKeyRequired' };
+type PlayVideoResponse = { command: 'playVideo'; videoId: string };
+type LoadShortsResponse = { command: 'loadShorts'; shorts: any[]; currentIndex: number };
+type PagedResults = { results: any[]; nextPageToken?: string; totalResults?: number };
+type SearchResultsResponse = { command: 'searchResults' } & PagedResults;
+type TrendingResultsResponse = { command: 'trendingResults' } & PagedResults;
+type ExtensionToWebviewMessage =
+	| ApiKeyRequiredResponse
+	| PlayVideoResponse
+	| LoadShortsResponse
+	| SearchResultsResponse
+	| TrendingResultsResponse
+	| { command: 'loadFromUrl'; url: string };
 
 interface ParsedYouTubeUrl {
 	type: 'search' | 'video' | 'shorts' | 'playlist' | 'channel' | 'unknown';
@@ -87,7 +109,7 @@ function parseYouTubeUrl(url: string): ParsedYouTubeUrl {
 	}
 }
 
-function getWebviewContent(webview: vscode.Webview) {
+function getWebviewContent(webview: vscode.Webview): string {
 	const csp = `
 		default-src 'none';
 		img-src https: data: blob:;
@@ -832,31 +854,33 @@ function getWebviewContent(webview: vscode.Webview) {
 	</html>`;
 }
 
-async function handleWebviewMessage(message: any, postMessageCallback: (response: any) => void) {
+async function ensureApiKey(postMessageCallback: (response: ExtensionToWebviewMessage) => void): Promise<string | undefined> {
+	const config = vscode.workspace.getConfiguration('youtubeInVSCode');
+	const apiKey = config.get<string>('apiKey');
+	if (apiKey) return apiKey;
+	postMessageCallback({ command: 'apiKeyRequired' });
+	const response = await vscode.window.showInformationMessage(
+		'YouTube API Key is required. Would you like to set it up now?',
+		'Yes',
+		'No'
+	);
+	if (response === 'Yes') {
+		vscode.commands.executeCommand('workbench.action.openSettings', 'youtubeInVSCode.apiKey');
+	}
+	return undefined;
+}
+
+async function handleWebviewMessage(message: WebviewToExtensionMessage, postMessageCallback: (response: ExtensionToWebviewMessage) => void) {
 	switch (message.command) {
 		case 'loadFromUrl':
 			try {
-				const apiKey = vscode.workspace.getConfiguration('youtubeInVSCode').get('apiKey');
-				if (!apiKey) {
-					postMessageCallback({
-						command: 'apiKeyRequired'
-					});
-					const response = await vscode.window.showInformationMessage(
-						'YouTube API Key is required. Would you like to set it up now?',
-						'Yes',
-						'No'
-					);
-
-					if (response === 'Yes') {
-						vscode.commands.executeCommand('workbench.action.openSettings', 'youtubeInVSCode.apiKey');
-					}
-					return;
-				}
+				const apiKey = await ensureApiKey(postMessageCallback);
+				if (!apiKey) return;
 
 				const parsedUrl = parseYouTubeUrl(message.url);
 				
 				if (parsedUrl.type === 'search' && parsedUrl.searchQuery) {
-					const response = await axios.get(`https://www.googleapis.com/youtube/v3/search`, {
+					const response = await axios.get(YT_SEARCH, {
 						params: {
 							part: 'snippet',
 							maxResults: 50,
@@ -873,7 +897,7 @@ async function handleWebviewMessage(message: any, postMessageCallback: (response
 						totalResults: (response.data as any).pageInfo.totalResults
 					});
 				} else if (parsedUrl.type === 'video' && parsedUrl.videoId) {
-					const response = await axios.get(`https://www.googleapis.com/youtube/v3/videos`, {
+					const response = await axios.get(YT_VIDEOS, {
 						params: {
 							part: 'snippet,statistics',
 							id: parsedUrl.videoId,
@@ -887,7 +911,7 @@ async function handleWebviewMessage(message: any, postMessageCallback: (response
 						});
 					}
 				} else if (parsedUrl.type === 'shorts' && parsedUrl.videoId) {
-					const videoResponse = await axios.get(`https://www.googleapis.com/youtube/v3/videos`, {
+					const videoResponse = await axios.get(YT_VIDEOS, {
 						params: {
 							part: 'snippet,statistics',
 							id: parsedUrl.videoId,
@@ -899,7 +923,7 @@ async function handleWebviewMessage(message: any, postMessageCallback: (response
 						const video = videoResponse.data.items[0];
 						
 						try {
-							const relatedResponse = await axios.get(`https://www.googleapis.com/youtube/v3/search`, {
+							const relatedResponse = await axios.get(YT_SEARCH, {
 								params: {
 									part: 'snippet',
 									channelId: video.snippet.channelId,
@@ -927,7 +951,7 @@ async function handleWebviewMessage(message: any, postMessageCallback: (response
 						}
 					}
 				} else if (parsedUrl.type === 'playlist' && parsedUrl.playlistId) {
-					const response = await axios.get(`https://www.googleapis.com/youtube/v3/playlistItems`, {
+					const response = await axios.get(YT_PLAYLIST_ITEMS, {
 						params: {
 							part: 'snippet',
 							maxResults: 50,
@@ -954,24 +978,10 @@ async function handleWebviewMessage(message: any, postMessageCallback: (response
 			break;
 		case 'search':
 			try {
-				const apiKey = vscode.workspace.getConfiguration('youtubeInVSCode').get('apiKey');
-				if (!apiKey) {
-					postMessageCallback({
-						command: 'apiKeyRequired'
-					});
-					const response = await vscode.window.showInformationMessage(
-						'YouTube API Key is required. Would you like to set it up now?',
-						'Yes',
-						'No'
-					);
+				const apiKey = await ensureApiKey(postMessageCallback);
+				if (!apiKey) return;
 
-					if (response === 'Yes') {
-						vscode.commands.executeCommand('workbench.action.openSettings', 'youtubeInVSCode.apiKey');
-					}
-					return;
-				}
-
-				const response = await axios.get(`https://www.googleapis.com/youtube/v3/search`, {
+				const response = await axios.get(YT_SEARCH, {
 					params: {
 						part: 'snippet',
 						maxResults: 50,
@@ -993,24 +1003,10 @@ async function handleWebviewMessage(message: any, postMessageCallback: (response
 			break;
 		case 'getTrending':
 			try {
-				const apiKey = vscode.workspace.getConfiguration('youtubeInVSCode').get('apiKey');
-				if (!apiKey) {
-					postMessageCallback({
-						command: 'apiKeyRequired'
-					});
-					const response = await vscode.window.showInformationMessage(
-						'YouTube API Key is required. Would you like to set it up now?',
-						'Yes',
-						'No'
-					);
+				const apiKey = await ensureApiKey(postMessageCallback);
+				if (!apiKey) return;
 
-					if (response === 'Yes') {
-						vscode.commands.executeCommand('workbench.action.openSettings', 'youtubeInVSCode.apiKey');
-					}
-					return;
-				}
-
-				const response = await axios.get(`https://www.googleapis.com/youtube/v3/videos`, {
+				const response = await axios.get(YT_VIDEOS, {
 					params: {
 						part: 'snippet,statistics',
 						chart: 'mostPopular',
@@ -1073,7 +1069,7 @@ class YouTubePanel {
 
 		this._panel.webview.onDidReceiveMessage(
 			async message => {
-				handleWebviewMessage(message, (response) => {
+				handleWebviewMessage(message as WebviewToExtensionMessage, (response: ExtensionToWebviewMessage) => {
 					this._panel.webview.postMessage(response);
 				});
 			},
@@ -1129,7 +1125,7 @@ class YouTubeViewProvider implements vscode.WebviewViewProvider {
 
 		// Handle messages from the webview
 		webviewView.webview.onDidReceiveMessage(async message => {
-			handleWebviewMessage(message, (response) => {
+			handleWebviewMessage(message as WebviewToExtensionMessage, (response: ExtensionToWebviewMessage) => {
 				this._view?.webview.postMessage(response);
 			});
 		});
@@ -1138,8 +1134,6 @@ class YouTubeViewProvider implements vscode.WebviewViewProvider {
 }
 
 export function activate(context: vscode.ExtensionContext) {
-	console.log('YouTube in VS Code is now active!');
-
 	const sidebarProvider = new YouTubeViewProvider(context.extensionUri);
 	const explorerProvider = new YouTubeViewProvider(context.extensionUri);
 

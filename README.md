@@ -1,7 +1,7 @@
 # YouTube in VS Code
 
-[![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/your-publisher-name.youtube-in-vscode)](https://marketplace.visualstudio.com/items?itemName=your-publisher-name.youtube-in-vscode)
-[![Visual Studio Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/your-publisher-name.youtube-in-vscode)](https://marketplace.visualstudio.com/items?itemName=your-publisher-name.youtube-in-vscode)
+[![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/shreyshah.youtube-in-vscode)](https://marketplace.visualstudio.com/items?itemName=shreyshah.youtube-in-vscode)
+[![Visual Studio Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/shreyshah.youtube-in-vscode)](https://marketplace.visualstudio.com/items?itemName=shreyshah.youtube-in-vscode)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A powerful VS Code extension that seamlessly integrates YouTube directly into your development environment, allowing you to watch videos, browse content, and stay productive without leaving your editor.
@@ -28,7 +28,7 @@ A powerful VS Code extension that seamlessly integrates YouTube directly into yo
 3. Search for "YouTube in VS Code"
 4. Click "Install"
 
-Alternatively, install from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=your-publisher-name.youtube-in-vscode).
+Alternatively, install from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=shreyshah.youtube-in-vscode).
 
 ## 🛠️ Setup
 
@@ -163,7 +163,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 If you encounter any issues or have questions:
 
-- Check the [Issues](https://github.com/yourusername/youtube-in-vscode/issues) page
+- Check the [Issues](https://github.com/shahshrey/youtube-vscode/issues) page
 - Create a new issue with detailed information about the problem
 - Include your VS Code version and extension version
 
