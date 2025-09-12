@@ -8,3 +8,9 @@ vsc-extension-quickstart.md
 **/.eslintrc.json
 **/*.map
 **/*.ts
+**/.github/**
+**/.vscodeignore
+**/README.md
+**/LICENSE
+**/.prettierrc*
+**/.editorconfig

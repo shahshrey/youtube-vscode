@@ -1,0 +1,45 @@
+name: Release VSIX
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Install dependencies
+        run: npm ci || npm install --no-fund --no-audit
+      - name: Set version from tag
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          node -e "const fs=require('fs');const p=require('./package.json');p.version='${TAG}'.replace(/^v/,'');fs.writeFileSync('package.json',JSON.stringify(p,null,4)+'\n')"
+      - name: Compile
+        run: npm run compile
+      - name: Install vsce
+        run: npm install -g @vscode/vsce
+      - name: Package VSIX
+        run: vsce package
+      - name: Compute Artifact Name
+        id: meta
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          echo "name=${NAME}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "vsix=${NAME}-${VERSION}.vsix" >> $GITHUB_OUTPUT
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.meta.outputs.vsix }}
+          name: ${{ steps.meta.outputs.name }} v${{ steps.meta.outputs.version }}
+          tag_name: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master, improve-1 ]
+  pull_request:
+    branches: [ main, master, improve-1 ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Install dependencies
+        run: npm ci || npm install --no-fund --no-audit
+      - name: Lint
+        run: npm run lint
+      - name: Compile
+        run: npm run compile
