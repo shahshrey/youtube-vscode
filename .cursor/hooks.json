@@ -24,15 +24,25 @@
                 "command": "./hooks/audit.sh"
             }
         ],
-        "userPromptSubmit": [
+        "beforeSubmitPrompt": [
             {
-                "command": "./hooks/youtube-start.sh"
+                "command": "./hooks/01-enhance-user-prompt.sh"
+            },
+            {
+                "command": "./hooks/audit.sh"
             }
         ],
         "stop": [
             {
-                "command": "./hooks/youtube-close.sh"
+                "command": "./hooks/03-new-chat-prompt.sh"
+            },
+            {
+                "command": "./hooks/audit.sh"
+            },
+            {
+                "command": "./hooks/02-auto-followup-prompt.sh"
             }
+       
         ]
     }
 }
