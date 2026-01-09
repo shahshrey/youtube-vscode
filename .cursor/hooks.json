@@ -1,48 +1,15 @@
 {
     "version": 1,
     "hooks": {
-        "beforeShellExecution": [
-            {
-                "command": "./hooks/audit.sh"
-            },
-            {
-                "command": "./hooks/block-git.sh"
-            }
-        ],
-        "beforeMCPExecution": [
-            {
-                "command": "./hooks/audit.sh"
-            }
-        ],
-        "beforeReadFile": [
-            {
-                "command": "./hooks/redact-secrets.sh"
-            }
-        ],
-        "afterFileEdit": [
-            {
-                "command": "./hooks/audit.sh"
-            }
-        ],
         "beforeSubmitPrompt": [
             {
-                "command": "./hooks/01-enhance-user-prompt.sh"
-            },
-            {
-                "command": "./hooks/audit.sh"
+                "command": "./.cursor/hooks/youtube-start.sh"
             }
         ],
         "stop": [
             {
-                "command": "./hooks/03-new-chat-prompt.sh"
-            },
-            {
-                "command": "./hooks/audit.sh"
-            },
-            {
-                "command": "./hooks/02-auto-followup-prompt.sh"
+                "command": "./.cursor/hooks/youtube-close.sh"
             }
-       
         ]
     }
 }
